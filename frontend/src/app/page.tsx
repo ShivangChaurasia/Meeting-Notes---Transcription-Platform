@@ -22,7 +22,9 @@ export default function Dashboard() {
 
   const fetchMeetings = () => {
     getMeetings().then(data => {
-      setMeetings(data);
+      // Sort meetings by date descending
+      const sorted = data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      setMeetings(sorted);
       setLoading(false);
     }).catch(console.error);
   };
@@ -40,18 +42,16 @@ export default function Dashboard() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      // Basic mock parsing of transcript text
       const segments = newTranscript.split('\n').filter(l => l.trim()).map((line, i) => {
-        // e.g. "00:00 - Sarah: Hello" -> fallback to just putting it all as text if format not found
         return {
           start_time: i * 10,
           end_time: (i + 1) * 10,
-          speaker: "Speaker",
+          speaker: i % 2 === 0 ? "Host" : "Guest",
           text: line.trim()
         };
       });
 
-      const newMeeting = await createMeeting({
+      await createMeeting({
         title: newTitle || 'Untitled Meeting',
         duration: segments.length * 10,
         participants: newParticipants || 'Unknown',
@@ -64,7 +64,6 @@ export default function Dashboard() {
       setNewTranscript('');
       fetchMeetings();
       showToast('Meeting created successfully!', 'success');
-      // optionally router.push(`/meetings/${newMeeting.id}`);
     } catch (err) {
       showToast('Error creating meeting', 'error');
     } finally {
@@ -77,44 +76,45 @@ export default function Dashboard() {
     m.participants.toLowerCase().includes(search.toLowerCase())
   );
 
+  // Statistics calculation
+  const totalMeetings = meetings.length;
+  const totalActionItems = meetings.reduce((acc, m) => acc + (m.action_items?.length || 0), 0);
+  const recentMeetings = meetings.filter(m => {
+    const meetingDate = new Date(m.date);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    return meetingDate >= sevenDaysAgo;
+  }).length;
+
   return (
     <div className="page-container" style={{position: 'relative'}}>
       {toast && (
-        <div style={{
-          position: 'fixed', bottom: 20, right: 20, zIndex: 100,
-          background: toast.type === 'success' ? 'var(--success)' : 'var(--danger)',
-          color: 'white', padding: '12px 20px', borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}>
-          {toast.message}
+        <div className={`toast toast-${toast.type}`}>
+          {toast.type === 'success' ? '✅' : '❌'} {toast.message}
         </div>
       )}
 
       {isModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          background: 'rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', 
-          alignItems: 'center', justifyContent: 'center'
-        }}>
-          <div className="card" style={{width: '500px', maxWidth: '90%'}}>
-            <h2 className="section-title">New Meeting</h2>
+        <div className="modal-overlay">
+          <div className="card" style={{width: '500px', maxWidth: '90%', margin: '20px'}}>
+            <h2 className="section-title">Record New Meeting</h2>
             <form onSubmit={handleCreateMeeting} style={{display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px'}}>
               <div>
-                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '4px'}}>Title</label>
-                <input required value={newTitle} onChange={e => setNewTitle(e.target.value)} type="text" style={{width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)'}} />
+                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '6px', fontWeight: 500, color: 'var(--text-secondary)'}}>Meeting Title</label>
+                <input required value={newTitle} onChange={e => setNewTitle(e.target.value)} type="text" className="search-input" style={{borderRadius: '8px', padding: '10px 16px'}} placeholder="e.g. Q3 Product Roadmap" />
               </div>
               <div>
-                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '4px'}}>Participants</label>
-                <input required value={newParticipants} onChange={e => setNewParticipants(e.target.value)} type="text" style={{width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)'}} />
+                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '6px', fontWeight: 500, color: 'var(--text-secondary)'}}>Participants (comma separated)</label>
+                <input required value={newParticipants} onChange={e => setNewParticipants(e.target.value)} type="text" className="search-input" style={{borderRadius: '8px', padding: '10px 16px'}} placeholder="Alice, Bob, Charlie" />
               </div>
               <div>
-                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '4px'}}>Transcript Text (newline separated)</label>
-                <textarea required value={newTranscript} onChange={e => setNewTranscript(e.target.value)} rows={5} style={{width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)', resize: 'vertical'}} />
+                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '6px', fontWeight: 500, color: 'var(--text-secondary)'}}>Transcript Text (newline separated)</label>
+                <textarea required value={newTranscript} onChange={e => setNewTranscript(e.target.value)} rows={6} className="search-input" style={{borderRadius: '8px', padding: '12px 16px', resize: 'vertical', fontFamily: 'inherit'}} placeholder="Paste meeting transcript here..." />
               </div>
-              <div style={{display: 'flex', justifyContent: 'flex-end', gap: '12px'}}>
+              <div style={{display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px'}}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn" disabled={isSubmitting}>
-                  {isSubmitting ? 'Saving...' : 'Create Meeting'}
+                  {isSubmitting ? 'Processing...' : 'Upload & Process'}
                 </button>
               </div>
             </form>
@@ -125,42 +125,91 @@ export default function Dashboard() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Meetings</h1>
-          <p style={{color: 'var(--text-secondary)'}}>Your recent recordings and notes</p>
+          <p style={{color: 'var(--text-secondary)', marginTop: '4px'}}>Your recent recordings and notes</p>
         </div>
-        <div style={{display: 'flex', gap: '12px'}}>
-          <input 
-            type="text" 
-            placeholder="Search meetings..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)'}}
-          />
-          <button className="btn" onClick={() => setIsModalOpen(true)}>Create Meeting</button>
+        <div style={{display: 'flex', gap: '16px', alignItems: 'center'}}>
+          <div className="search-container">
+            <svg className="search-icon" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <input 
+              type="text" 
+              className="search-input"
+              placeholder="Search meetings..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+          <button className="btn" onClick={() => setIsModalOpen(true)}>
+            <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+            Record Meeting
+          </button>
         </div>
       </div>
 
+      {!loading && (
+        <div className="stats-grid">
+          <div className="card stat-card">
+            <span className="stat-title">Total Meetings</span>
+            <span className="stat-value">{totalMeetings}</span>
+          </div>
+          <div className="card stat-card">
+            <span className="stat-title">Total Action Items</span>
+            <span className="stat-value">{totalActionItems}</span>
+          </div>
+          <div className="card stat-card">
+            <span className="stat-title">Recent (Last 7 Days)</span>
+            <span className="stat-value">{recentMeetings}</span>
+          </div>
+        </div>
+      )}
+
       {loading ? (
-        <div>Loading meetings...</div>
+        <div style={{padding: '40px', textAlign: 'center', color: 'var(--text-secondary)'}}>
+          <div style={{width: 32, height: 32, border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px'}}></div>
+          <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          Loading your workspace...
+        </div>
       ) : (
         <div className="meetings-grid">
           {filtered.map(meeting => (
             <Link href={`/meetings/${meeting.id}`} key={meeting.id}>
               <div className="card meeting-card">
-                <div className="meeting-title">{meeting.title}</div>
-                <div className="meeting-meta">
+                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
+                  <div className="meeting-title">{meeting.title}</div>
+                </div>
+                
+                <div className="participant-avatars">
+                  {meeting.participants.split(',').slice(0, 3).map((p, i) => (
+                    <div key={i} className="avatar" title={p.trim()}>
+                      {p.trim().charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                  {meeting.participants.split(',').length > 3 && (
+                    <div className="avatar" style={{background: 'var(--surface-hover)', color: 'var(--text-secondary)'}}>
+                      +{meeting.participants.split(',').length - 3}
+                    </div>
+                  )}
+                </div>
+
+                <div className="meeting-meta" style={{marginTop: 'auto'}}>
                   <span className="badge">
-                    {new Date(meeting.date).toLocaleDateString()}
+                    {new Date(meeting.date).toLocaleDateString(undefined, {month: 'short', day: 'numeric', year: 'numeric'})}
                   </span>
                   <span>{Math.floor(meeting.duration / 60)} mins</span>
-                </div>
-                <div style={{fontSize: '0.875rem', color: 'var(--text-secondary)'}}>
-                  <strong>Participants:</strong> {meeting.participants}
+                  {meeting.action_items && meeting.action_items.length > 0 && (
+                    <span style={{marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-color)'}}>
+                      <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+                      {meeting.action_items.length}
+                    </span>
+                  )}
                 </div>
               </div>
             </Link>
           ))}
           {filtered.length === 0 && !loading && (
-            <div>No meetings found.</div>
+            <div style={{gridColumn: '1 / -1', padding: '60px 20px', textAlign: 'center', color: 'var(--text-muted)'}}>
+              <svg width="48" height="48" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{margin: '0 auto 16px', opacity: 0.5}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+              <p>No meetings found.</p>
+            </div>
           )}
         </div>
       )}

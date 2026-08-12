@@ -65,7 +65,12 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
   }, [currentTime, isPlaying]);
 
   if (loading || !meeting) {
-    return <div className="page-container">Loading workspace...</div>;
+    return (
+      <div style={{padding: '40px', textAlign: 'center', color: 'var(--text-secondary)'}}>
+        <div style={{width: 32, height: 32, border: '3px solid var(--border-color)', borderTopColor: 'var(--accent-color)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 16px'}}></div>
+        Loading meeting workspace...
+      </div>
+    );
   }
 
   const formatTime = (seconds: number) => {
@@ -130,7 +135,6 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
     if (confirm('Are you sure you want to delete this meeting? This cannot be undone.')) {
       try {
         await deleteMeeting(meeting.id);
-        // Using window.alert because router.push might immediately transition away from toast, but we can try toast then route
         window.alert('Meeting deleted successfully.');
         router.push('/');
       } catch (err) {
@@ -142,34 +146,25 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
   return (
     <div className="page-container" style={{display: 'flex', flexDirection: 'column', height: '100%', paddingBottom: 0, position: 'relative'}}>
       {toast && (
-        <div style={{
-          position: 'fixed', bottom: 20, right: 20, zIndex: 100,
-          background: toast.type === 'success' ? 'var(--success)' : 'var(--danger)',
-          color: 'white', padding: '12px 20px', borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-        }}>
-          {toast.message}
+        <div className={`toast toast-${toast.type}`}>
+          {toast.type === 'success' ? '✅' : '❌'} {toast.message}
         </div>
       )}
 
       {isEditModalOpen && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
-          background: 'rgba(0,0,0,0.5)', zIndex: 50, display: 'flex', 
-          alignItems: 'center', justifyContent: 'center'
-        }}>
+        <div className="modal-overlay">
           <div className="card" style={{width: '500px', maxWidth: '90%'}}>
-            <h2 className="section-title">Edit Meeting</h2>
+            <h2 className="section-title">Edit Meeting Details</h2>
             <form onSubmit={handleEditMeeting} style={{display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px'}}>
               <div>
-                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '4px'}}>Title</label>
-                <input required value={editTitle} onChange={e => setEditTitle(e.target.value)} type="text" style={{width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)'}} />
+                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '6px', fontWeight: 500}}>Title</label>
+                <input required value={editTitle} onChange={e => setEditTitle(e.target.value)} type="text" className="search-input" style={{borderRadius: '8px', padding: '10px 16px'}} />
               </div>
               <div>
-                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '4px'}}>Participants</label>
-                <input required value={editParticipants} onChange={e => setEditParticipants(e.target.value)} type="text" style={{width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid var(--border-color)'}} />
+                <label style={{display: 'block', fontSize: '0.875rem', marginBottom: '6px', fontWeight: 500}}>Participants</label>
+                <input required value={editParticipants} onChange={e => setEditParticipants(e.target.value)} type="text" className="search-input" style={{borderRadius: '8px', padding: '10px 16px'}} />
               </div>
-              <div style={{display: 'flex', justifyContent: 'flex-end', gap: '12px'}}>
+              <div style={{display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '8px'}}>
                 <button type="button" className="btn btn-secondary" onClick={() => setIsEditModalOpen(false)}>Cancel</button>
                 <button type="submit" className="btn" disabled={isSubmitting}>
                   {isSubmitting ? 'Saving...' : 'Save Changes'}
@@ -180,23 +175,35 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
         </div>
       )}
 
-      <div className="page-header" style={{marginBottom: '16px'}}>
+      <div className="page-header" style={{marginBottom: '24px'}}>
         <div>
-          <Link href="/" style={{color: 'var(--accent-color)', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '8px'}}>
-            &larr; Back to Meetings
+          <Link href="/" style={{color: 'var(--text-secondary)', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '12px', fontWeight: 500}}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            Back to Meetings
           </Link>
           <h1 className="page-title">{meeting.title}</h1>
-          <div className="meeting-meta" style={{marginTop: '4px'}}>
-            <span>{new Date(meeting.date).toLocaleDateString()}</span>
+          <div className="meeting-meta" style={{marginTop: '8px'}}>
+            <span className="badge">{new Date(meeting.date).toLocaleDateString(undefined, {month: 'long', day: 'numeric', year: 'numeric'})}</span>
             <span>&bull;</span>
-            <span>{formatTime(meeting.duration)}</span>
+            <span style={{display: 'flex', alignItems: 'center', gap: '4px'}}>
+              <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+              {formatTime(meeting.duration)}
+            </span>
             <span>&bull;</span>
-            <span>{meeting.participants}</span>
+            <div className="participant-avatars" style={{display: 'inline-flex', verticalAlign: 'middle'}}>
+              {meeting.participants.split(',').map((p, i) => (
+                <div key={i} className="avatar" title={p.trim()} style={{width: 24, height: 24, fontSize: '0.65rem'}}>
+                  {p.trim().charAt(0).toUpperCase()}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
         <div style={{display: 'flex', gap: '12px'}}>
           <button className="btn btn-secondary" onClick={() => setIsEditModalOpen(true)}>Edit</button>
-          <button className="btn" style={{background: 'var(--danger)'}} onClick={handleDeleteMeeting}>Delete</button>
+          <button className="btn" style={{background: 'var(--danger)', color: 'white'}} onClick={handleDeleteMeeting}>
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
         </div>
       </div>
 
@@ -204,7 +211,11 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
         <div className="transcript-section">
           <div className="audio-player">
             <button className="play-button" onClick={() => setIsPlaying(!isPlaying)}>
-              {isPlaying ? '⏸' : '▶'}
+              {isPlaying ? (
+                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M6 4h4v16H6zM14 4h4v16h-4z"></path></svg>
+              ) : (
+                <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+              )}
             </button>
             <div className="progress-container">
               <div className="progress-bar-bg" onClick={handleSeek}>
@@ -221,12 +232,16 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
           </div>
 
           <div className="transcript-search">
-            <input 
-              type="text" 
-              placeholder="Search transcript..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <div className="search-container" style={{width: '100%'}}>
+              <svg className="search-icon" width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+              <input 
+                type="text" 
+                className="search-input"
+                placeholder="Search within transcript..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="transcript-list" ref={transcriptRef}>
@@ -251,7 +266,9 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
                 >
                   <div className="segment-time">{formatTime(segment.start_time)}</div>
                   <div className="segment-content">
-                    <div className="segment-speaker">{segment.speaker}</div>
+                    <div className="segment-speaker" style={{color: segment.speaker === 'Host' ? 'var(--accent-color)' : 'var(--text-primary)'}}>
+                      {segment.speaker}
+                    </div>
                     <div className="segment-text">
                       {matchesSearch ? highlightText(segment.text, searchQuery) : segment.text}
                     </div>
@@ -265,7 +282,7 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
         <div className="sidebar-section">
           <div className="card">
             <div className="section-title">
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+              <svg width="20" height="20" fill="none" stroke="var(--accent-color)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
               AI Summary
             </div>
             {meeting.summaries.map(s => (
@@ -275,7 +292,7 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
 
           <div className="card">
             <div className="section-title">
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
+              <svg width="20" height="20" fill="none" stroke="var(--success)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path></svg>
               Action Items
             </div>
             <div>
@@ -293,25 +310,31 @@ export default function MeetingDetail({ params }: { params: Promise<{ id: string
                   </div>
                 </div>
               ))}
+              {meeting.action_items.length === 0 && (
+                <p className="summary-text" style={{fontSize: '0.875rem'}}>No action items found.</p>
+              )}
             </div>
           </div>
 
           <div className="card">
             <div className="section-title">
-              <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
-              Topics
+              <svg width="20" height="20" fill="none" stroke="var(--warning)" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path></svg>
+              Key Topics
             </div>
             <div style={{display: 'flex', flexWrap: 'wrap', gap: '8px'}}>
               {meeting.topics.map(topic => (
                 <div 
                   key={topic.id} 
                   className="badge" 
-                  style={{cursor: 'pointer'}}
+                  style={{cursor: 'pointer', background: 'var(--surface-hover)'}}
                   onClick={() => handleSegmentClick(topic.start_time)}
                 >
-                  {topic.name} ({formatTime(topic.start_time)})
+                  {topic.name} <span style={{color: 'var(--text-muted)', marginLeft: '4px'}}>{formatTime(topic.start_time)}</span>
                 </div>
               ))}
+              {meeting.topics.length === 0 && (
+                <p className="summary-text" style={{fontSize: '0.875rem'}}>No topics found.</p>
+              )}
             </div>
           </div>
         </div>
