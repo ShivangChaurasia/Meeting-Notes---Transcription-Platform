@@ -12,8 +12,8 @@ app = FastAPI(title="Meeting Notes API")
 
 import os
 
-origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000")
-origins = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
+origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://meetranscribe.vercel.app")
+origins = [origin.strip().rstrip('/') for origin in origins_env.split(",") if origin.strip()]
 
 app.add_middleware(
     CORSMiddleware,
