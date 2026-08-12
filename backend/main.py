@@ -31,6 +31,7 @@ if "*" in origins:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.vercel\.app|http://localhost:.*",
     allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
