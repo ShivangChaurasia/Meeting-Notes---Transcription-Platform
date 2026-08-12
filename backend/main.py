@@ -16,10 +16,14 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Meeting Notes API")
 
-origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://meetranscribe.vercel.app")
-origins = [origin.strip().rstrip('/') for origin in origins_env.split(",") if origin.strip()]
+default_origins = ["http://localhost:3000", "https://meetranscribe.vercel.app"]
+origins_env = os.getenv("CORS_ORIGINS", "")
+if origins_env:
+    extra_origins = [origin.strip().rstrip('/') for origin in origins_env.split(",") if origin.strip()]
+    origins = list(set(default_origins + extra_origins))
+else:
+    origins = default_origins
 
-# If wildcard '*' is specified, disable credentials to comply with browser CORS specs
 allow_credentials = True
 if "*" in origins:
     allow_credentials = False
