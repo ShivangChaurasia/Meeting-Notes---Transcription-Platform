@@ -1,3 +1,9 @@
+import sys
+import os
+
+# Ensure backend directory is in sys.path for robust imports regardless of invocation path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -10,18 +16,25 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Meeting Notes API")
 
-import os
-
 origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000,https://meetranscribe.vercel.app")
 origins = [origin.strip().rstrip('/') for origin in origins_env.split(",") if origin.strip()]
+
+# If wildcard '*' is specified, disable credentials to comply with browser CORS specs
+allow_credentials = True
+if "*" in origins:
+    allow_credentials = False
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
-    allow_credentials=True,
+    allow_credentials=allow_credentials,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+def root():
+    return {"message": "Meeting Notes API is running", "status": "online"}
 
 @app.get("/meetings", response_model=List[schemas.Meeting])
 def read_meetings(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
@@ -52,9 +65,10 @@ def update_meeting(meeting_id: int, meeting_update: schemas.MeetingUpdate, db: S
         raise HTTPException(status_code=404, detail="Meeting not found")
     return db_meeting
 
-@app.patch("/action-items/{item_id}")
+@app.patch("/action-items/{item_id}", response_model=schemas.ActionItem)
 def update_action_item(item_id: int, is_completed: int, db: Session = Depends(get_db)):
     item = crud.update_action_item(db, item_id, is_completed)
     if not item:
         raise HTTPException(status_code=404, detail="Action item not found")
     return item
+
