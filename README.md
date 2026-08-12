@@ -85,13 +85,14 @@ The app will be available at [http://localhost:3000](http://localhost:3000).
 
 ## Environment Variables
 
-By default, the application runs without needing any environment variables (using localhost defaults).
+By default, the application runs locally without needing any environment variables (using localhost defaults).
 
-If you deploy the backend to a different URL, create a `.env` file in the `frontend` directory:
+To connect the frontend to the deployed Render backend, configure the environment variable:
 
 ```env
-NEXT_PUBLIC_API_URL=http://your-backend-url:8000
+NEXT_PUBLIC_API_URL=https://meeting-notes-transcription-api.onrender.com
 ```
+
 
 ## Seed Data
 
