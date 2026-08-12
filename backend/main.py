@@ -10,9 +10,14 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Meeting Notes API")
 
+import os
+
+origins_env = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+origins = [origin.strip() for origin in origins_env.split(",") if origin.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
